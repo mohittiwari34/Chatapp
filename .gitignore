@@ -1,0 +1,17 @@
+# Node.js dependencies
+node_modules/
+server/node_modules
+
+# Parcel cache
+.parcel-cache/
+client/.parcel-cache/
+server/.parcel-cache/
+
+# Build outputs
+dist/
+
+# Environment files
+.env
+
+# Logs
+*.log
