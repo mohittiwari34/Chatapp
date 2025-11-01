@@ -2,9 +2,13 @@ import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { useState } from "react";
 import { Link,useParams } from "react-router";
+import { ChatContext } from "./global";
+import { useContext } from "react";
+
 import socket from "./socket";
 
 export default function Pribate(){
+    const{userName}=useContext(ChatContext);
     const {id}=useParams();
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
@@ -20,7 +24,7 @@ export default function Pribate(){
     const sendMessage = () => {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     
-      socket.emit("privateChat",{to:id,msg:message,timer:time});
+      socket.emit("privateChat",{to:id,msg:message,timer:time,userName});
       setMessages((prev) => [...prev, { user: "You", text: message, timer: time }]);
     setMessage("");
   };

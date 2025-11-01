@@ -70,9 +70,9 @@ io.on("connection", (socket) => {
   
 //raj
   // Private message
-  socket.on("privateChat", async({ to, msg, timer }) => {
+  socket.on("privateChat", async({ to, msg, timer,userName }) => {
     io.to(to).emit("recieve", {
-      user: socket.userName,
+      user: socket.userName || userName,
       text:msg,
       timer,
     });
