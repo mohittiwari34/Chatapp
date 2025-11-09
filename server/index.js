@@ -20,6 +20,11 @@ app.get("/", (req, res) => {
 
 // Keep track of users in each room
 const roomUsers = {};
+function isInSameRoom(socket,targetId){
+  if(!socket.room) return false;
+  const users=roomUsers[socket.room]||[];
+  return users.some((u)=>u.id===targetId);
+}
 
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
@@ -30,6 +35,53 @@ io.on("connection", (socket) => {
   });
   
 
+  socket.on("call-user",({to,fromName})=>{
+    if(!isInSameRoom(socket,to)){
+      socket.emit("call-error",{message:"Target not in same room"});
+      return;
+    }
+    io.to(to).emit("Incoming-call",{
+      id:socket.id,
+      name:fromName
+    }
+
+    );
+  });
+  socket.on("offer",({to,offer})=>{
+    if(!isInSameRoom(socket,to)){
+      socket.emit("signal-error",{message:"Target not in same room"});
+      return;
+    }
+    io.to(to).emit("offer",
+      {
+        from:id,
+        offer,
+
+      }
+    );
+  });
+  socket.on("answer",({to,answer})=>{
+    if(!isInSameRoom(socket,to)){
+      socket.emit("signal-error",{message:"Target not in same room"});
+      return;
+    }
+    io.to(to).emit("answer",{
+      from:socket.id,
+      answer,
+    })
+  })
+  socket.on("candidate",({to,candidate})=>{
+    if (!isInSameRoom(socket, to)) {
+      
+      return;
+    }
+    io.to(to).emit("candidate",{
+      from:socket.id,
+    candidate    });
+  });
+  socket.on("hangup",({to})=>{
+    io.to(to).emit("hangup",{from:socket.id});
+  })
   // Join room
   socket.on("join-room", (room) => {
     if (!socket.userName) return;

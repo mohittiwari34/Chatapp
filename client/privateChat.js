@@ -59,7 +59,7 @@ export default function Pribate(){
     }
     const acceptCall=async ()=>{
       await startCamera();
-      const pc=createPc(incoming.id);
+      const pc=createPc(icoming.id);
       await pc.setRemoteDescription(currentOffer.current);
       const answer=await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -92,18 +92,38 @@ export default function Pribate(){
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
     useEffect(()=>{
-      socket.on("incoming-call",({from,fromName})=>{
+      socket.on("Incoming-call",({from,fromName})=>{
         setIncoming({id:from,name:fromName});
-      
-      });
+      })
       socket.on("offer",({from,offer})=>{
-        currentOffer.currrent=offer;
+        currentOffer.current=offer;
         setIncoming({id:from});
       })
-      soc
+      socket.on("answer",async({from,answer})=>{
+        if(pc.current){
+          await pc.current.setRemoteDescription(answer);
+
+        }
+      });
+      socket.on("candidate",async({from,candidate})=>{
+        if(pc.current&&candidate){
+          await pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+
+        }
+      })
+      socket.on("hangup",()=>hangup());
+
+      return ()=>{
+        socket.off("incoming-call");
+        socket.off("offer");
+        socket.off("answer");
+        socket.off("candidate");
+        socket.off("hangup");
+      }
 
 
-    })
+
+    },[])
     useEffect(()=>{
         socket.on("recieve",(data)=>{
       setMessages((prev)=>[
