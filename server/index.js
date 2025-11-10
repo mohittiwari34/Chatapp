@@ -40,7 +40,7 @@ io.on("connection", (socket) => {
       socket.emit("call-error",{message:"Target not in same room"});
       return;
     }
-    io.to(to).emit("Incoming-call",{
+    io.to(to).emit("incoming-call",{
       id:socket.id,
       name:fromName
     }
@@ -54,7 +54,7 @@ io.on("connection", (socket) => {
     }
     io.to(to).emit("offer",
       {
-        from:id,
+        from:socket.id,
         offer,
 
       }
@@ -77,7 +77,8 @@ io.on("connection", (socket) => {
     }
     io.to(to).emit("candidate",{
       from:socket.id,
-    candidate    });
+      candidate,    
+  });
   });
   socket.on("hangup",({to})=>{
     io.to(to).emit("hangup",{from:socket.id});

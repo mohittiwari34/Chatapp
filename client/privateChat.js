@@ -12,18 +12,20 @@ export default function Pribate(){
     const {id}=useParams();
     const localVideo=useRef(null);
     const remoteVideo=useRef(null);
-    const pc=useRef(null);
+    const pcRef=useRef(null);
     const localStream=useRef(null);
     const currentOffer=useRef(null);
     const [icoming,setIncoming]=useState(null);
     const [inCall,setInCall]=useState(false);
 
     const iceServers=[
-      {},
       {
-        urls:"",
-        username:"",
-        credential:" ",
+        urls:"stun:global.stun.twilio.com:3478"
+      },
+      {
+        urls:"turn:global.turn.twilio.com:3478?transport=udp",
+        username:"d6e50e63d43d9254d97f5a472eac273377c450e5f4b5f1a52c752135af8ee078",
+        credential:"lWFtFMbs14/mLabJxhwFmgSb6R5yTO8OVZjZf/3s3H8=",
       },
     ]
     const createPc=(targetId)=>{
@@ -34,7 +36,7 @@ export default function Pribate(){
       pc.ontrack=(e)=>(remoteVideo.current.srcObject=e.streams[0]);
       if(localStream.current){
         localStream.current.getTracks().forEach((t)=>
-        pc.addtTrack(t,localStream.current));
+        pc.addTrack(t,localStream.current));
       }
       pcRef.current=pc;
       return pc;
@@ -63,18 +65,18 @@ export default function Pribate(){
       await pc.setRemoteDescription(currentOffer.current);
       const answer=await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit("answer",{to:incoming.id,answer: pc.localDescription});
+      socket.emit("answer",{to:icoming.id,answer: pc.localDescription});
       setInCall(true);
       setIncoming(null);
     }
     const rejectCall=()=>{
-      socket.emit("hangup",{to:incoming.id});
-      setIncoming("null");
+      socket.emit("hangup",{to:icoming.id});
+      setIncoming(null);
 
     }
     const hangup=()=>{
-      if(pc.current){
-        pc.current.close();
+      if(pcRef.current){
+        pcRef.current.close();
 
       }
       if(localStream.current){
@@ -92,7 +94,7 @@ export default function Pribate(){
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
     useEffect(()=>{
-      socket.on("Incoming-call",({from,fromName})=>{
+      socket.on("incoming-call",({from,fromName})=>{
         setIncoming({id:from,name:fromName});
       })
       socket.on("offer",({from,offer})=>{
@@ -100,14 +102,14 @@ export default function Pribate(){
         setIncoming({id:from});
       })
       socket.on("answer",async({from,answer})=>{
-        if(pc.current){
-          await pc.current.setRemoteDescription(answer);
+        if(pcRef.current){
+          await pcRef.current.setRemoteDescription(answer);
 
         }
       });
       socket.on("candidate",async({from,candidate})=>{
-        if(pc.current&&candidate){
-          await pc.current.addIceCandidate(new RTCIceCandidate(candidate));
+        if(pcRef.current&&candidate){
+          await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
 
         }
       })
@@ -143,6 +145,31 @@ export default function Pribate(){
   return(
     <div style={{ padding: "20px", textAlign: "center" }}>
       <h2>Private Chat with {id}</h2>
+      {/*video call control*/}
+      {!inCall&&(
+        <button onClick={startCall} style={{margin:"10px"}}>Start video call</button>
+      )}
+      {inCall &&(
+        <button style={{margin:"10px",color:"red"}}>End Call</button>
+      )}
+      {/* video window */}
+      <div style={{display:"flex",
+        justifyContent:"center",
+        gap:"10px",
+        marginBottom:"20px"
+      }}>
+        <video ref={localVideo} autoPlay muted playsInline width="300" style={{borderRadius:"8px"}}></video>
+        <video ref={remoteVideo} autoPlay muted playsInline width="300" style={{borderRadius:"8px"}}></video>
+      </div>
+      {/* Incoming call popup */}
+      {icoming&&!inCall&&(
+        <div>
+          <h1>Incoming Call from {icoming.name||icoming.id}</h1>
+          <button onClick={acceptCall}>Accept</button>
+          <button onClick={rejectCall}>Reject</button>
+        </div>
+      )}
+      {/* Private chatting text section */}
       <div style={{ border: "1px solid gray", height: "60vh", overflowY: "auto", padding: "10px" }}>
         {messages.map((m, i) => (
           <div key={i} style={{ textAlign: m.user === "You" ? "right" : "left" }}>
