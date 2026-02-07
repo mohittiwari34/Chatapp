@@ -48,15 +48,26 @@ export default function Pribate() {
     }
   }, [callData, id]);
 
-  const iceServers = [
-    {
-      urls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-      ]
-    },
-  ];
+  // Fetch ICE servers (TURN) from backend
+  const [iceServers, setIceServers] = useState([
+    { urls: "stun:stun.l.google.com:19302" } // Default Fallback
+  ]);
+
+  useEffect(() => {
+    const fetchIceServers = async () => {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL || "https://chatapp-server-33ru.onrender.com"}/api/turn-credentials`);
+        if (response.ok) {
+          const servers = await response.json();
+          setIceServers(servers);
+          console.log("Loaded TURN servers");
+        }
+      } catch (error) {
+        console.error("Failed to fetch TURN servers, using default STUN", error);
+      }
+    };
+    fetchIceServers();
+  }, []);
 
   const createPc = (targetId) => {
     const pc = new RTCPeerConnection({ iceServers });

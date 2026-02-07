@@ -14,8 +14,25 @@ const io = new Server(server, {
   },
 });
 
+const twilio = require("twilio");
+
+// Twilio Config
+const accountSid = "AC8f7dca7a007a5619efed78a6c00bfb49";
+const authToken = "1ebc2917fde1bfae3fc7c5dcba2d21dd";
+const client = twilio(accountSid, authToken);
+
 app.get("/", (req, res) => {
   res.send("Backend is running");
+});
+
+app.get("/api/turn-credentials", async (req, res) => {
+  try {
+    const token = await client.tokens.create();
+    res.json(token.iceServers);
+  } catch (error) {
+    console.error("Error creating Twilio token:", error);
+    res.status(500).send("Could not create TURN credentials");
+  }
 });
 
 // ... content ...
