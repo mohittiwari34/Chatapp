@@ -72,10 +72,20 @@ export default function Pribate() {
   const createPc = (targetId) => {
     const pc = new RTCPeerConnection({ iceServers });
     pc.onicecandidate = ({ candidate }) => {
-      if (candidate) socket.emit("candidate", { to: targetId, candidate });
+      if (candidate) {
+        console.log("📤 Sending ICE Candidate");
+        socket.emit("candidate", { to: targetId, candidate });
+      }
     };
     pc.ontrack = (e) => {
+      console.log("📺 Received Remote Track");
       if (remoteVideo.current) remoteVideo.current.srcObject = e.streams[0];
+    };
+    pc.onconnectionstatechange = () => {
+      console.log("🔄 Connection State:", pc.connectionState);
+    };
+    pc.oniceconnectionstatechange = () => {
+      console.log("❄️ ICE Connection State:", pc.iceConnectionState);
     };
     if (localStream.current) {
       localStream.current.getTracks().forEach((t) =>
@@ -103,9 +113,11 @@ export default function Pribate() {
   }
   const startCall = async () => {
     await startCamera();
+    console.log("🎥 Camera started, creating PC...");
     const pc = createPc(id);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    console.log("📤 Sending Offer...");
     socket.emit("call-user", { to: id, fromName: userName });
     socket.emit("offer", { to: id, offer: pc.localDescription });
     setInCall(true);
@@ -119,11 +131,14 @@ export default function Pribate() {
 
     try {
       await startCamera();
+      console.log("🎥 Camera started (Answer), creating PC...");
       const pc = createPc(targetId);
       await pc.setRemoteDescription(offerToUse);
+      console.log("✅ Remote Description Set (Offer)");
       await processCandidateQueue(); // Process any queued candidates
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log("📤 Sending Answer...");
       socket.emit("answer", { to: targetId, answer: pc.localDescription });
       setInCall(true);
       setIncoming(null);
@@ -159,26 +174,33 @@ export default function Pribate() {
 
   useEffect(() => {
     socket.on("incoming-call", ({ from, fromName }) => {
+      console.log("📞 Incoming call from:", from, fromName);
       playIncomingCallSound();
       setIncoming({ id: from, name: fromName });
     })
     socket.on("offer", ({ from, offer }) => {
+      console.log("📨 Received Offer from:", from);
       currentOffer.current = offer;
       setIncoming({ id: from });
     })
     socket.on("answer", async ({ from, answer }) => {
+      console.log("📨 Received Answer from:", from);
       if (pcRef.current) {
         await pcRef.current.setRemoteDescription(answer);
+        console.log("✅ Remote Description Set (Answer)");
         await processCandidateQueue(); // Process any queued candidates
       }
     });
     socket.on("candidate", async ({ from, candidate }) => {
+      console.log("🧊 Received ICE Candidate from:", from);
       const pc = pcRef.current;
       if (pc) {
         if (pc.remoteDescription) {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log("✅ Added ICE Candidate immediately");
         } else {
           // Queue candidate if remote description isn't set yet
+          console.log("⏳ Queued ICE Candidate (Remote Desc not ready)");
           candidateQueue.current.push(candidate);
         }
       }

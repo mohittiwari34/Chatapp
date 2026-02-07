@@ -83,33 +83,23 @@ io.on("connection", (socket) => {
       socket.emit("signal-error", { message: "Target not in same room" });
       return;
     }
-    io.to(to).emit("offer",
-      {
-        from: socket.id,
-        offer,
-
-      }
-    );
+    console.log(`Signal: Offer from ${socket.id} to ${to}`);
+    io.to(to).emit("offer", { from: socket.id, offer });
   });
+
   socket.on("answer", ({ to, answer }) => {
     if (!isInSameRoom(socket, to)) {
       socket.emit("signal-error", { message: "Target not in same room" });
       return;
     }
-    io.to(to).emit("answer", {
-      from: socket.id,
-      answer,
-    })
+    console.log(`Signal: Answer from ${socket.id} to ${to}`);
+    io.to(to).emit("answer", { from: socket.id, answer });
   })
-  socket.on("candidate", ({ to, candidate }) => {
-    if (!isInSameRoom(socket, to)) {
 
-      return;
-    }
-    io.to(to).emit("candidate", {
-      from: socket.id,
-      candidate,
-    });
+  socket.on("candidate", ({ to, candidate }) => {
+    if (!isInSameRoom(socket, to)) return;
+    console.log(`Signal: Candidate from ${socket.id} to ${to}`);
+    io.to(to).emit("candidate", { from: socket.id, candidate });
   });
   socket.on("hangup", ({ to }) => {
     io.to(to).emit("hangup", { from: socket.id });
