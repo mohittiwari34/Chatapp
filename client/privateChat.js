@@ -49,12 +49,11 @@ export default function Pribate() {
 
   const iceServers = [
     {
-      urls: "stun:global.stun.twilio.com:3478"
-    },
-    {
-      urls: "turn:global.turn.twilio.com:3478?transport=udp",
-      username: "d6e50e63d43d9254d97f5a472eac273377c450e5f4b5f1a52c752135af8ee078",
-      credential: "lWFtFMbs14/mLabJxhwFmgSb6R5yTO8OVZjZf/3s3H8=",
+      urls: [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+      ]
     },
   ];
 
