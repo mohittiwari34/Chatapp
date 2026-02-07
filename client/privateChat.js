@@ -12,6 +12,7 @@ export default function Pribate() {
   const pcRef = useRef(null);
   const localStream = useRef(null);
   const currentOffer = useRef(null);
+  const candidateQueue = useRef([]); // Fix: Queue for candidates arriving before remoteDescription
   const [icoming, setIncoming] = useState(null);
   const [inCall, setInCall] = useState(false);
   const [message, setMessage] = useState("");
@@ -73,6 +74,15 @@ export default function Pribate() {
     return pc;
   };
 
+  const processCandidateQueue = async () => {
+    if (pcRef.current && candidateQueue.current.length > 0) {
+      for (const candidate of candidateQueue.current) {
+        await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      candidateQueue.current = [];
+    }
+  };
+
   const startCamera = async () => {
     localStream.current = await navigator.mediaDevices.getUserMedia({
       video: true,
@@ -100,6 +110,7 @@ export default function Pribate() {
       await startCamera();
       const pc = createPc(targetId);
       await pc.setRemoteDescription(offerToUse);
+      await processCandidateQueue(); // Process any queued candidates
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
       socket.emit("answer", { to: targetId, answer: pc.localDescription });
@@ -147,11 +158,18 @@ export default function Pribate() {
     socket.on("answer", async ({ from, answer }) => {
       if (pcRef.current) {
         await pcRef.current.setRemoteDescription(answer);
+        await processCandidateQueue(); // Process any queued candidates
       }
     });
     socket.on("candidate", async ({ from, candidate }) => {
-      if (pcRef.current && candidate) {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+      const pc = pcRef.current;
+      if (pc) {
+        if (pc.remoteDescription) {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } else {
+          // Queue candidate if remote description isn't set yet
+          candidateQueue.current.push(candidate);
+        }
       }
     })
     socket.on("hangup", () => hangup());
