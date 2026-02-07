@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 export const ChatContext = createContext();
 const SOCKET_URL = window.location.hostname === "localhost"
   ? "http://localhost:2000"
-  : "https://your-backend-url.onrender.com"; // UPDATE THIS AFTER DEPLOYING SERVER
+  : "https://chatapp-server-33ru.onrender.com"; // UPDATE THIS AFTER DEPLOYING SERVER
 
 const socket = io(SOCKET_URL);
 export function ChatProvide({ children }) {
