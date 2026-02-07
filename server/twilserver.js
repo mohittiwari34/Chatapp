@@ -1,8 +1,7 @@
 const twilio = require('twilio');
 
 // Replace with your actual credentials from Twilio Console
-const accountSid = 'AC8f7dca7a007a5619efed78a6c00bfb49';
-const authToken = '307eac22104346e5710282f8bf0a640d';
+
 const client = twilio(accountSid, authToken);
 
 // Generate TURN credentials

@@ -1,15 +1,15 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const Main2=require("./database");
+// const Main2=require("./database");
 
 const app = express();
 const server = http.createServer(app);
 
-// Allow CORS from frontend (localhost:1234)
+// Allow CORS from frontend
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:1234",
+    origin: "*", // Allow all origins for easier deployment, or set to your frontend URL
     methods: ["GET", "POST"],
   },
 });
@@ -18,12 +18,15 @@ app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
+// ... content ...
+
+
 // Keep track of users in each room
 const roomUsers = {};
-function isInSameRoom(socket,targetId){
-  if(!socket.room) return false;
-  const users=roomUsers[socket.room]||[];
-  return users.some((u)=>u.id===targetId);
+function isInSameRoom(socket, targetId) {
+  if (!socket.room) return false;
+  const users = roomUsers[socket.room] || [];
+  return users.some((u) => u.id === targetId);
 }
 
 io.on("connection", (socket) => {
@@ -33,73 +36,98 @@ io.on("connection", (socket) => {
   socket.on("name", (userName) => {
     socket.userName = userName;
   });
-  
 
-  socket.on("call-user",({to,fromName})=>{
-    if(!isInSameRoom(socket,to)){
-      socket.emit("call-error",{message:"Target not in same room"});
+
+  socket.on("call-user", ({ to, fromName }) => {
+    if (!isInSameRoom(socket, to)) {
+      socket.emit("call-error", { message: "Target not in same room" });
       return;
     }
-    io.to(to).emit("incoming-call",{
-      id:socket.id,
-      name:fromName
+    io.to(to).emit("incoming-call", {
+      id: socket.id,
+      name: fromName
     }
 
     );
   });
-  socket.on("offer",({to,offer})=>{
-    if(!isInSameRoom(socket,to)){
-      socket.emit("signal-error",{message:"Target not in same room"});
+  socket.on("offer", ({ to, offer }) => {
+    if (!isInSameRoom(socket, to)) {
+      socket.emit("signal-error", { message: "Target not in same room" });
       return;
     }
     io.to(to).emit("offer",
       {
-        from:socket.id,
+        from: socket.id,
         offer,
 
       }
     );
   });
-  socket.on("answer",({to,answer})=>{
-    if(!isInSameRoom(socket,to)){
-      socket.emit("signal-error",{message:"Target not in same room"});
+  socket.on("answer", ({ to, answer }) => {
+    if (!isInSameRoom(socket, to)) {
+      socket.emit("signal-error", { message: "Target not in same room" });
       return;
     }
-    io.to(to).emit("answer",{
-      from:socket.id,
+    io.to(to).emit("answer", {
+      from: socket.id,
       answer,
     })
   })
-  socket.on("candidate",({to,candidate})=>{
+  socket.on("candidate", ({ to, candidate }) => {
     if (!isInSameRoom(socket, to)) {
-      
+
       return;
     }
-    io.to(to).emit("candidate",{
-      from:socket.id,
-      candidate,    
+    io.to(to).emit("candidate", {
+      from: socket.id,
+      candidate,
+    });
   });
-  });
-  socket.on("hangup",({to})=>{
-    io.to(to).emit("hangup",{from:socket.id});
+  socket.on("hangup", ({ to }) => {
+    io.to(to).emit("hangup", { from: socket.id });
   })
   // Join room
-  socket.on("join-room", (room) => {
-    if (!socket.userName) return;
+  // Join room
+  socket.on("join-room", (payload) => {
+    console.log("Received join-room event with payload:", payload);
+
+    let room, userName;
+
+    if (typeof payload === 'object') {
+      room = payload.room;
+      userName = payload.userName;
+    } else {
+      room = payload;
+    }
+
+    if (userName) socket.userName = userName;
+
+    console.log(`User ${socket.id} (Name: ${socket.userName}) joining room: ${room}`);
+
+    if (!socket.userName) {
+      console.log("Join failed: No username set for socket");
+      return;
+    }
 
     socket.room = room;
     socket.join(room);
 
     if (!roomUsers[room]) roomUsers[room] = [];
+
+    // Prevent duplicate user entries
+    roomUsers[room] = roomUsers[room].filter(u => u.id !== socket.id);
     roomUsers[room].push({ id: socket.id, name: socket.userName });
-    io.to(socket.room).emit("table",roomUsers[socket.room]);
+
+    console.log("Current users in room:", roomUsers[room]);
+
+    io.to(socket.room).emit("table", roomUsers[socket.room]);
 
     // Update all users in the room
     io.to(room).emit("update users", {
       userList: roomUsers[room],
       nasa: `${socket.userName} joined the chat`,
     });
-    
+
   });
 
   // Typing indicator
@@ -111,7 +139,7 @@ io.on("connection", (socket) => {
   });
 
   // Public message
-  socket.on("message", async({ msg, timer }) => {
+  socket.on("message", async ({ msg, timer }) => {
     if (!socket.room) return;
     io.to(socket.room).emit("new-message", {
       user: socket.userName,
@@ -120,18 +148,18 @@ io.on("connection", (socket) => {
     });
     //await Main2("Messages",msg,socket.userName,timer);
   });
-  
-//raj
+
+  //raj
   // Private message
-  socket.on("privateChat", async({ to, msg, timer,userName }) => {
+  socket.on("privateChat", async ({ to, msg, timer, userName }) => {
     io.to(to).emit("recieve", {
       user: socket.userName || userName,
-      text:msg,
+      text: msg,
       timer,
     });
     //await Main2("Messages",msg,socket.userName,timer);
   });
-  
+
 
   // Disconnect
   socket.on("disconnect", () => {
@@ -149,6 +177,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(2000, () => {
-  console.log("Server running on port 2000");
+const PORT = process.env.PORT || 2000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
