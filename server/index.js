@@ -42,7 +42,8 @@ app.get("/api/turn-credentials", async (req, res) => {
     res.json(token.iceServers);
   } catch (error) {
     console.error("Error creating Twilio token:", error);
-    res.status(500).send("Could not create TURN credentials");
+    // Send specific error message to client for debugging
+    res.status(500).json({ error: "Could not create TURN credentials", details: error.message });
   }
 });
 
